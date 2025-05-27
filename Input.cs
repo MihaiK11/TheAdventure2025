@@ -2,12 +2,14 @@ using Silk.NET.SDL;
 
 namespace TheAdventure;
 
+
 public unsafe class Input
 {
     private readonly Sdl _sdl;
 
     public EventHandler<(int x, int y)>? OnMouseClick;
-
+    
+    private bool _mouseClicked = false;
     public Input(Sdl sdl)
     {
         _sdl = sdl;
@@ -42,13 +44,47 @@ public unsafe class Input
         ReadOnlySpan<byte> _keyboardState = new(_sdl.GetKeyboardState(null), (int)KeyCode.Count);
         return _keyboardState[(int)KeyCode.A] == 1;
     }
+    
+    public bool IsKeyDPressed()
+    {
+        ReadOnlySpan<byte> _keyboardState = new(_sdl.GetKeyboardState(null), (int)KeyCode.Count);
+        return _keyboardState[(int)KeyCode.D] == 1;
+    }
+    
+    public bool IsKeyWPressed()
+    {
+        ReadOnlySpan<byte> _keyboardState = new(_sdl.GetKeyboardState(null), (int)KeyCode.Count);
+        return _keyboardState[(int)KeyCode.W] == 1;
+    }
+    
+    public bool IsKeySPressed()
+    {
+        ReadOnlySpan<byte> _keyboardState = new(_sdl.GetKeyboardState(null), (int)KeyCode.Count);
+        return _keyboardState[(int)KeyCode.S] == 1;
+    }
 
     public bool IsKeyBPressed()
     {
         ReadOnlySpan<byte> _keyboardState = new(_sdl.GetKeyboardState(null), (int)KeyCode.Count);
         return _keyboardState[(int)KeyCode.B] == 1;
     }
+    
+    public bool IsKeyEscapePressed()
+    {
+        ReadOnlySpan<byte> _keyboardState = new(_sdl.GetKeyboardState(null), (int)KeyCode.Count);
+        return _keyboardState[(int)KeyCode.Escape] == 1;
+    }
+    
+    public bool IsMouseClicked()
+    {
+        if (_mouseClicked)
+        {
+            _mouseClicked = false;
+            return true;
+        }
 
+        return false;
+    }
     public bool ProcessInput()
     {
         Event ev = new Event();
@@ -134,6 +170,7 @@ public unsafe class Input
                 {
                     if (ev.Button.Button == (byte)MouseButton.Primary)
                     {
+                        _mouseClicked = true;
                         OnMouseClick?.Invoke(this, (ev.Button.X, ev.Button.Y));
                     }
 

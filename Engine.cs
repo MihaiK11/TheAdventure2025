@@ -21,13 +21,17 @@ public class Engine
     private PlayerObject? _player;
 
     private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
+    
+    private bool _isPaused = false;
+    private int _pauseTextureId = -1;
+    private int _pauseTextureWidth = 0;
+    private int _pauseTextureHeight = 0;
 
     public Engine(GameRenderer renderer, Input input)
     {
         _renderer = renderer;
         _input = input;
 
-        _input.OnMouseClick += (_, coords) => AddBomb(coords.x, coords.y);
     }
 
     public void SetupWorld()
@@ -75,6 +79,13 @@ public class Engine
         _currentLevel = level;
 
         _scriptEngine.LoadAll(Path.Combine("Assets", "Scripts"));
+        
+        _pauseTextureId = _renderer.LoadTexture(
+            Path.Combine("Assets", "pause.png"),
+            out var texSize
+        );
+        _pauseTextureWidth  = texSize.Width;
+        _pauseTextureHeight = texSize.Height;
     }
 
     public void ProcessFrame()
@@ -87,12 +98,24 @@ public class Engine
         {
             return;
         }
+        
+        if (_input.IsKeyEscapePressed())
+        {
+            _isPaused = !_isPaused;
+            Thread.Sleep(200); // Prevent rapid toggling
+            return;
+        }
+        
+        if (_isPaused)
+        {
+            return;
+        }
 
-        double up = _input.IsUpPressed() ? 1.0 : 0.0;
-        double down = _input.IsDownPressed() ? 1.0 : 0.0;
-        double left = _input.IsLeftPressed() ? 1.0 : 0.0;
-        double right = _input.IsRightPressed() ? 1.0 : 0.0;
-        bool isAttacking = _input.IsKeyAPressed() && (up + down + left + right <= 1);
+        double up = _input.IsUpPressed() || _input.IsKeyWPressed() ? 1.0 : 0.0;
+        double down = _input.IsDownPressed() || _input.IsKeySPressed() ? 1.0 : 0.0;
+        double left = _input.IsLeftPressed() || _input.IsKeyAPressed() ? 1.0 : 0.0;
+        double right = _input.IsRightPressed() || _input.IsKeyDPressed() ? 1.0 : 0.0;
+        bool isAttacking = _input.IsMouseClicked() && (up + down + left + right <= 1);
         bool addBomb = _input.IsKeyBPressed();
 
         _player.UpdatePosition(up, down, left, right, 48, 48, msSinceLastFrame);
@@ -119,6 +142,37 @@ public class Engine
 
         RenderTerrain();
         RenderAllObjects();
+            
+        if (_isPaused && _pauseTextureId != -1)
+        {
+            var cameraPos = _renderer.GetCameraPosition();
+
+            // Calculate max width/height for scaling the pause image
+            var (screenWidth, screenHeight) = _renderer.GetScreenSize();
+            int maxWidth = screenWidth * 3 / 5;
+            int maxHeight = screenHeight * 3 / 5;
+
+            float scaleX = (float)maxWidth / _pauseTextureWidth;
+            float scaleY = (float)maxHeight / _pauseTextureHeight;
+            float scale = MathF.Min(scaleX, scaleY);
+
+            int drawWidth = (int)(_pauseTextureWidth * scale);
+            int drawHeight = (int)(_pauseTextureHeight * scale);
+
+            // Calculate destination rect centered at camera world position
+            var pauseDst = new Rectangle<int>(
+                cameraPos.X - drawWidth / 2,
+                cameraPos.Y - drawHeight / 2,
+                drawWidth,
+                drawHeight);
+
+            _renderer.SetDrawColor(255, 255, 255, 255);
+            
+            _renderer.RenderTexture(
+                _pauseTextureId,
+                new Rectangle<int>(0, 0, _pauseTextureWidth, _pauseTextureHeight),
+                pauseDst);
+        }
 
         _renderer.PresentFrame();
     }

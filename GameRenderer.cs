@@ -39,7 +39,16 @@ public unsafe class GameRenderer
     {
         _camera.LookAt(x, y);
     }
-
+    
+    public (int X, int Y) GetCameraPosition()
+    {
+        return (_camera.X, _camera.Y);
+    }
+    
+    public (int ScreenWidth, int ScreenHeight) GetScreenSize()
+    {
+        return (_window.Size.Width, _window.Size.Height);
+    }
     public int LoadTexture(string fileName, out TextureData textureInfo)
     {
         using (var fStream = new FileStream(fileName, FileMode.Open))
@@ -110,4 +119,5 @@ public unsafe class GameRenderer
     {
         _sdl.RenderPresent(_renderer);
     }
+    
 }
