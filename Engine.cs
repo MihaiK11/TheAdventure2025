@@ -5,6 +5,11 @@ using TheAdventure.Models;
 using TheAdventure.Models.Data;
 using TheAdventure.Scripting;
 
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.Fonts;
+using SixLabors.ImageSharp.Drawing.Processing;
+
+
 namespace TheAdventure;
 
 public class Engine
@@ -26,6 +31,9 @@ public class Engine
     private int _pauseTextureId = -1;
     private int _pauseTextureWidth = 0;
     private int _pauseTextureHeight = 0;
+    
+    private bool _isGameOver = false;
+
 
     public Engine(GameRenderer renderer, Input input)
     {
@@ -110,6 +118,16 @@ public class Engine
         {
             return;
         }
+        
+        if (_isGameOver)
+        {
+            if (_input.IsKeyRPressed())
+            {
+                RestartGame();
+            }
+            return;
+        }
+        
 
         double up = _input.IsUpPressed() || _input.IsKeyWPressed() ? 1.0 : 0.0;
         double down = _input.IsDownPressed() || _input.IsKeySPressed() ? 1.0 : 0.0;
@@ -173,7 +191,21 @@ public class Engine
                 new Rectangle<int>(0, 0, _pauseTextureWidth, _pauseTextureHeight),
                 pauseDst);
         }
+        
+        if (_isGameOver)
+        {
+            var (screenWidth, screenHeight) = _renderer.GetScreenSize();
+            string message = "Game Over\nPress R to Restart";
 
+            var font = SystemFonts.CreateFont("Arial", 24f);
+            var textSize = TextMeasurer.MeasureSize(message, new RichTextOptions(font));
+            int x = (screenWidth - (int)textSize.Width) / 2;
+            int y = (screenHeight - (int)textSize.Height) / 2;
+
+            _renderer.DrawText(message, x, y, 24f, new Rgba32(255, 0, 0, 255));
+        }
+
+        
         _renderer.PresentFrame();
     }
 
@@ -204,6 +236,7 @@ public class Engine
             if (deltaX < 32 && deltaY < 32)
             {
                 _player.GameOver();
+                _isGameOver = true;
             }
         }
 
@@ -269,4 +302,17 @@ public class Engine
         TemporaryGameObject bomb = new(spriteSheet, 2.1, (worldCoords.X, worldCoords.Y));
         _gameObjects.Add(bomb.Id, bomb);
     }
+    
+    public void RestartGame()
+    {
+        _gameObjects.Clear();
+        _loadedTileSets.Clear();
+        _tileIdMap.Clear();
+        _currentLevel = new();
+        _player = null;
+        _isPaused = false;
+        _isGameOver = false;
+        SetupWorld();
+    }
+
 }

@@ -2,6 +2,13 @@ using Silk.NET.Maths;
 using Silk.NET.SDL;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.Fonts;
+using SixLabors.ImageSharp.Drawing;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.ColorSpaces; 
+
+
 using TheAdventure.Models;
 using Point = Silk.NET.SDL.Point;
 
@@ -49,6 +56,59 @@ public unsafe class GameRenderer
     {
         return (_window.Size.Width, _window.Size.Height);
     }
+    public unsafe int DrawText(string text, int x, int y, float fontSize = 24f, Rgba32? color = null)
+    {
+        var font = SystemFonts.CreateFont("Arial", fontSize);
+        var textColor = color ?? new Rgba32(255, 255, 255, 255); // default white
+
+        var richTextOptions = new RichTextOptions(font)
+        {
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Origin = new PointF(0, 0)
+        };
+
+        var textSize = TextMeasurer.MeasureSize(text, richTextOptions);
+
+        using var image = new Image<Rgba32>((int)textSize.Width + 4, (int)textSize.Height + 4);
+
+        image.Mutate(ctx => ctx.DrawText(richTextOptions, text, textColor));
+
+        var pixelData = new byte[image.Width * image.Height * 4];
+        image.CopyPixelDataTo(pixelData);
+
+        fixed (byte* data = pixelData)
+        {
+            var surface = _sdl.CreateRGBSurfaceWithFormatFrom(
+                data, image.Width, image.Height, 32,
+                image.Width * 4, (uint)PixelFormatEnum.Rgba32);
+
+            if (surface == null)
+                throw new Exception("Failed to create surface from text");
+
+            var texture = _sdl.CreateTextureFromSurface(_renderer, surface);
+            _sdl.FreeSurface(surface);
+
+            var textureId = _textureId++;
+            _texturePointers[textureId] = (IntPtr)texture;
+            _textureData[textureId] = new TextureData
+            {
+                Width = image.Width,
+                Height = image.Height
+            };
+
+            // IMPORTANT: Draw text directly to screen coordinates (no camera transform)
+            var dst = new Rectangle<int>(x, y, image.Width, image.Height);
+
+            // Use SDL_RenderCopy directly for screen space rendering:
+            _sdl.RenderCopy(_renderer, (Silk.NET.SDL.Texture*)texture, null, ref dst);
+
+            return textureId;
+        }
+    }
+
+
+    
     public int LoadTexture(string fileName, out TextureData textureInfo)
     {
         using (var fStream = new FileStream(fileName, FileMode.Open))
