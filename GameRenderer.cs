@@ -56,9 +56,9 @@ public unsafe class GameRenderer
     {
         return (_window.Size.Width, _window.Size.Height);
     }
-    public unsafe int DrawText(string text, int x, int y, float fontSize = 24f, Rgba32? color = null)
+    public unsafe int DrawText(string text, int x, int y, float fontSize = 24f, Rgba32? color = null,Font? fontStyle = null)
     {
-        var font = SystemFonts.CreateFont("Arial", fontSize);
+        var font = fontStyle ?? SystemFonts.CreateFont("Arial", fontSize);
         var textColor = color ?? new Rgba32(255, 255, 255, 255); // default white
 
         var richTextOptions = new RichTextOptions(font)
@@ -70,7 +70,10 @@ public unsafe class GameRenderer
 
         var textSize = TextMeasurer.MeasureSize(text, richTextOptions);
 
-        using var image = new Image<Rgba32>((int)textSize.Width + 4, (int)textSize.Height + 4);
+        int padding = 6;
+        using var image = new Image<Rgba32>(
+            (int)Math.Ceiling(textSize.Width) + padding * 2,
+            (int)Math.Ceiling(textSize.Height) + padding * 2);
 
         image.Mutate(ctx => ctx.DrawText(richTextOptions, text, textColor));
 

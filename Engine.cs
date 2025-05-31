@@ -135,8 +135,12 @@ public class Engine
         double right = _input.IsRightPressed() || _input.IsKeyDPressed() ? 1.0 : 0.0;
         bool isAttacking = _input.IsMouseClicked() && (up + down + left + right <= 1);
         bool addBomb = _input.IsKeyBPressed();
-
-        _player.UpdatePosition(up, down, left, right, 48, 48, msSinceLastFrame);
+        
+        var level = _currentLevel;
+        var worldBounds = new Rectangle<int>(0, 0, level.Width.Value * level.TileWidth.Value,
+            level.Height.Value * level.TileHeight.Value);
+        _player.UpdatePosition(up, down, left, right, 48, 48, msSinceLastFrame,  worldBounds);
+        
         if (isAttacking)
         {
             _player.Attack();
@@ -195,15 +199,38 @@ public class Engine
         if (_isGameOver)
         {
             var (screenWidth, screenHeight) = _renderer.GetScreenSize();
-            string message = "Game Over\nPress R to Restart";
 
-            var font = SystemFonts.CreateFont("Arial", 24f);
-            var textSize = TextMeasurer.MeasureSize(message, new RichTextOptions(font));
-            int x = (screenWidth - (int)textSize.Width) / 2;
-            int y = (screenHeight - (int)textSize.Height) / 2;
+            string title = "Game Over";
+            string subtitle = "Press R to Restart";
 
-            _renderer.DrawText(message, x, y, 24f, new Rgba32(255, 0, 0, 255));
+            var titleFont = SystemFonts.CreateFont("Impact", 42f, FontStyle.Bold);
+            var subtitleFont = SystemFonts.CreateFont("Segoe UI", 22f);
+
+            var titleOptions = new RichTextOptions(titleFont)
+            {
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            var subtitleOptions = new RichTextOptions(subtitleFont)
+            {
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            var titleSize = TextMeasurer.MeasureSize(title, titleOptions);
+            var subtitleSize = TextMeasurer.MeasureSize(subtitle, subtitleOptions);
+
+            int totalHeight = (int)(titleSize.Height + subtitleSize.Height + 12);
+            int yTitle = (screenHeight - totalHeight) / 2;
+            int ySubtitle = yTitle + (int)titleSize.Height + 12;
+
+            int xTitle = (screenWidth - (int)titleSize.Width) / 2;
+            int xSubtitle = (screenWidth - (int)subtitleSize.Width) / 2;
+
+            _renderer.DrawText(title, xTitle, yTitle, 42f, new Rgba32(255, 0, 0, 255), titleFont);
+            _renderer.DrawText(subtitle, xSubtitle, ySubtitle, 22f, new Rgba32(255, 255, 255, 255), subtitleFont);
         }
+
+
+
 
         
         _renderer.PresentFrame();

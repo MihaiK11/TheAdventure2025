@@ -82,12 +82,13 @@ public class PlayerObject : RenderableGameObject
         SetState(PlayerState.Attack, direction);
     }
 
-    public void UpdatePosition(double up, double down, double left, double right, int width, int height, double time)
+    public void UpdatePosition(
+        double up, double down, double left, double right,
+        int width, int height, double time,
+        Rectangle<int> worldBounds)
     {
         if (State.State == PlayerState.GameOver)
-        {
             return;
-        }
 
         var pixelsToMove = _speed * (time / 1000.0);
 
@@ -96,6 +97,10 @@ public class PlayerObject : RenderableGameObject
 
         var y = Position.Y + (int)(down * pixelsToMove);
         y -= (int)(up * pixelsToMove);
+        
+        x = Math.Clamp(x, 20, worldBounds.Max.X - width + 40);
+        y = Math.Clamp(y, 30, worldBounds.Max.Y - height + 40);
+
 
         var newState = State.State;
         var newDirection = State.Direction;
@@ -105,9 +110,7 @@ public class PlayerObject : RenderableGameObject
             if (State.State == PlayerState.Attack)
             {
                 if (SpriteSheet.AnimationFinished)
-                {
                     newState = PlayerState.Idle;
-                }
             }
             else
             {
@@ -117,33 +120,19 @@ public class PlayerObject : RenderableGameObject
         else
         {
             newState = PlayerState.Move;
-            
-            if (y < Position.Y && newDirection != PlayerStateDirection.Up)
-            {
-                newDirection = PlayerStateDirection.Up;
-            }
 
-            if (y > Position.Y && newDirection != PlayerStateDirection.Down)
-            {
-                newDirection = PlayerStateDirection.Down;
-            }
+            if (y < Position.Y) newDirection = PlayerStateDirection.Up;
+            else if (y > Position.Y) newDirection = PlayerStateDirection.Down;
 
-            if (x < Position.X && newDirection != PlayerStateDirection.Left)
-            {
-                newDirection = PlayerStateDirection.Left;
-            }
-
-            if (x > Position.X && newDirection != PlayerStateDirection.Right)
-            {
-                newDirection = PlayerStateDirection.Right;
-            }
+            if (x < Position.X) newDirection = PlayerStateDirection.Left;
+            else if (x > Position.X) newDirection = PlayerStateDirection.Right;
         }
 
         if (newState != State.State || newDirection != State.Direction)
-        {
             SetState(newState, newDirection);
-        }
 
         Position = (x, y);
     }
+
+
 }
